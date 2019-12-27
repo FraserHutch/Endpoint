@@ -8,6 +8,7 @@ const (
 	ModelSuccess ModelStatusCode = iota
 	ModelDBCreateFailure
 	ModelDBGetFailure
+	ModelDBUserNotFound
 	ModelDBUpdateFailure
 	ModelDBDeleteFailure
 )
@@ -16,6 +17,7 @@ var modelStatusText = map[ModelStatusCode]string{
 	ModelSuccess:         "Success",
 	ModelDBCreateFailure: "User create failure",
 	ModelDBGetFailure:    "User get failure",
+	ModelDBUserNotFound:  "User not found",
 	ModelDBUpdateFailure: "User update failure",
 	ModelDBDeleteFailure: "User delete failure",
 }

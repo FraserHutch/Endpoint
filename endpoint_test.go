@@ -206,7 +206,7 @@ func TestMain(m *testing.M) {
 // Test creating a single user record (register) and reading it back (get)
 func TestCreate(t *testing.T) {
 
-	log.Print("Starting unit test create1")
+	log.Print("**** Starting unit test create ****")
 	if ret := deleteAll(); ret == false {
 		t.Error("delete all request failed")
 	}
@@ -236,7 +236,7 @@ func TestCreate(t *testing.T) {
 
 // Test creating a single user record (register) and reading it back (get)
 func TestCreateAll(t *testing.T) {
-	log.Print("Starting unit test createAll")
+	log.Print("**** Starting unit test createAll ****")
 	if ret := deleteAll(); ret == false {
 		t.Error("delete all request failed")
 	}
@@ -288,7 +288,7 @@ func TestCreateAll(t *testing.T) {
 }
 
 func TestUpdate(t *testing.T) {
-	log.Print("Starting unit test Update")
+	log.Print("**** Starting unit test update ****")
 	if ret := deleteAll(); ret == false {
 		t.Error("delete all request failed")
 	}
@@ -345,7 +345,7 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	log.Print("TestDelete():Starting unit test Update")
+	log.Print("**** Starting unit test delete ****")
 	if ret := deleteAll(); ret == false {
 		t.Error("delete all request failed")
 	}

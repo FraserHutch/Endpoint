@@ -1,6 +1,8 @@
 package main
 
 // This is the user manager - it roughly corresponds to the view part of MVP
+// Abstracts the db implementation.
+// Most of the model repsonse handling is a simple code mapping to HTTP status codes.
 
 import (
 	"encoding/json"
@@ -36,7 +38,7 @@ type UserNameOperation struct {
 	UserName string `json:"UserName"`
 }
 
-//// HANDLERS - these correcpond one to one with the API declared in endpoint.go
+//// HANDLERS - these correspond one to one with the API declared in endpoint.go
 func createUser(w http.ResponseWriter, r *http.Request) {
 	log.Println("createUser(): invoked")
 	reqBody, err := ioutil.ReadAll(r.Body)
@@ -44,7 +46,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Invalid data - expected Username, Email, and Password for new user")
 	}
 
-	// gget user data from json. Could use error handling.
+	// get user data from json. Could use error handling.
 	var newUser User
 	json.Unmarshal(reqBody, &newUser)
 	log.Printf("createUser(): request data: %v", newUser)
@@ -58,7 +60,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 	// handle response.'
 	switch retCode {
 	case ModelSuccess:
-		httpStatus = http.StatusOK
+		httpStatus = http.StatusCreated
 	case ModelDBCreateFailure:
 		httpStatus = http.StatusInternalServerError
 	}
@@ -75,7 +77,6 @@ func updateUser(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Invalid data - expected Username, Email, and Password for new user")
 	}
 
-	// gget user data from json. Could use error handling.
 	var user User
 	json.Unmarshal(reqBody, &user)
 	log.Printf("updateUser(): request data: %v", user)
@@ -86,10 +87,12 @@ func updateUser(w http.ResponseWriter, r *http.Request) {
 	result.User, retCode, result.Reason = modelUpdateUser(user)
 	result.Status = ModelStatusText(retCode)
 
-	// handle response.'
+	// handle response.
 	switch retCode {
 	case ModelSuccess:
 		httpStatus = http.StatusOK
+	case ModelDBUserNotFound:
+		httpStatus = http.StatusNotFound
 	case ModelDBUpdateFailure:
 		httpStatus = http.StatusInternalServerError
 	default:
@@ -111,7 +114,7 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Invalid data - expected Username")
 	}
 
-	// gget user data from json. Could use error handling.
+	// get user data from json. Could use error handling.
 	var userNameOp UserNameOperation
 	json.Unmarshal(reqBody, &userNameOp)
 	log.Printf("getUser(): request data: %v", userNameOp)
@@ -120,10 +123,12 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 	result.User, retCode, result.Reason = modelGetUser(userNameOp.UserName)
 	result.Status = ModelStatusText(retCode)
 
-	// handle response.'
+	// handle response.
 	switch retCode {
 	case ModelSuccess:
 		httpStatus = http.StatusOK
+	case ModelDBUserNotFound:
+		httpStatus = http.StatusNotFound
 	case ModelDBGetFailure:
 		httpStatus = http.StatusInternalServerError
 	}

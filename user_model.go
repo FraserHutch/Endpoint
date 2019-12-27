@@ -166,20 +166,27 @@ func modelUpdateUser(user User) (User, ModelStatusCode, string) {
 		log.Printf("modelUpdateUser(): no db connection")
 		return user, ModelDBUpdateFailure, "no db connection"
 	}
+
 	query := fmt.Sprintf("UPDATE %v SET Email = '%v', Password = '%v' where UserName = '%v';",
 		myDB.tableName, user.Email, user.Password, user.UserName)
 	log.Printf("modelUpdateUser(): query: %v", query)
-	results, err := myDB.connection.Query(query)
+	res, err := myDB.connection.Exec(query)
 	if err != nil {
 		return user, ModelDBUpdateFailure, fmt.Sprintf("failed to update record for user '%v': %v", user.UserName, err)
 	}
-	defer results.Close()
-	for results.Next() {
-		err = results.Scan(&user.ID, &user.UserName, &user.Email, &user.Password)
-		if err != nil {
-			return user, ModelDBUpdateFailure, fmt.Sprintf("failed to update record for user '%v': %v", user.UserName, err)
-		}
+
+	numUpdated, err := res.RowsAffected() // we expect one row affected. If 0 we did not find the user.
+	if err != nil {
+		panic(err)
 	}
+	if numUpdated == 0 {
+		return user, ModelDBUpdateFailure, fmt.Sprintf("user %v not found to update'", user.UserName)
+	}
+	if numUpdated != 1 {
+		return user, ModelDBUpdateFailure,
+			fmt.Sprintf("key error updating user '%v', %v instanced updated", user.UserName, numUpdated)
+	}
+
 	return user, ModelSuccess, ""
 }
 
@@ -198,7 +205,7 @@ func modelGetUser(userName string) (User, ModelStatusCode, string) {
 	log.Printf("modelGetUser(): query: %v", query)
 	results, err := myDB.connection.Query(query)
 	if err != nil {
-		return user, ModelDBGetFailure, fmt.Sprintf("failed to retrieve record for user '%v': %v", userName, err)
+		return user, ModelDBGetFailure, fmt.Sprintf("error retrieving record for user '%v': %v", userName, err)
 	}
 	defer results.Close()
 	var cnt = 0
@@ -210,7 +217,8 @@ func modelGetUser(userName string) (User, ModelStatusCode, string) {
 		cnt++
 	}
 	if cnt < 1 {
-		return user, ModelDBGetFailure, fmt.Sprintf("failed to retrieve record for user '%v': user not found", userName)
+		// user no ound
+		return user, ModelDBUserNotFound, fmt.Sprintf("failed to retrieve record for user '%v': user not found", userName)
 	}
 	return user, ModelSuccess, ""
 }
@@ -252,8 +260,11 @@ func modelDeleteUser(userName string) (User, ModelStatusCode, string) {
 		return user, ModelDBGetFailure, "no db connection"
 	}
 
-	// pull out old record. Ignore the errors, we'uu try to delete it anyways if not found
-	oldUser, _, _ := modelGetUser(userName)
+	// pull out old record. Ignore the errors, we'll try to delete it anyways if not found
+	oldUser, ret, reason := modelGetUser(userName)
+	if ret == ModelDBUserNotFound {
+		return oldUser, ret, reason
+	}
 
 	query := fmt.Sprintf("DELETE from %v where UserName = '%v'", myDB.tableName, userName)
 	log.Printf("modelDeleteUser(): query: %v", query)

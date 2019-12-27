@@ -23,14 +23,16 @@ func createEendpointsAndRun() {
 	} else {
 		log.Fatal("Failed to initialize memory model")
 	}
-	// endpoints. Technically only asked for the first, the others allow for unit tests.
-	//This is out API, and are RESTful
+	// Endpoints. Technically only asked for the first, the others allow for unit tests.
+	// Note that these could all share the base user endpoint - to differentiate between
+	// get/delete and get all/delete all I could have specified that distinction in the json.
+	// However, this to me is cleaner, and allows me to easily decouple from http.
 	router.HandleFunc("/user/register", createUser).Methods("POST")
-	router.HandleFunc("/user/get", getUser).Methods("POST")
-	router.HandleFunc("/user/getAll", getAllUsers).Methods("POST")
-	router.HandleFunc("/user/update", updateUser).Methods("POST")
-	router.HandleFunc("/user/delete", deleteUser).Methods("POST")
-	router.HandleFunc("/user/deleteAll", deleteAllUsers).Methods("POST")
+	router.HandleFunc("/user/get", getUser).Methods("GET")
+	router.HandleFunc("/user/getAll", getAllUsers).Methods("GET")
+	router.HandleFunc("/user/update", updateUser).Methods("PUT") // does NOT create if record not found
+	router.HandleFunc("/user/delete", deleteUser).Methods("DELETE")
+	router.HandleFunc("/user/deleteAll", deleteAllUsers).Methods("DELETE")
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 	releaseDB()
