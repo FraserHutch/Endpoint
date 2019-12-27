@@ -342,6 +342,15 @@ func TestUpdate(t *testing.T) {
 		t.Error(msg)
 	}
 
+	// now, attempt to update a user that does not exist.....
+	user = myUsers[0]
+	user.UserName = user.UserName + "ShouldNotExist"
+	if success, msg, _ := testUpdate(user); success == true {
+		t.Errorf("    update test failed, should not be able to update non-existent user %v (%v)", user.UserName, msg)
+	} else {
+		log.Println("    update test OK (failed to update non-existent record")
+	}
+
 }
 
 func TestDelete(t *testing.T) {
