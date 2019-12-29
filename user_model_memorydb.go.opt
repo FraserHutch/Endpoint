@@ -1,0 +1,175 @@
+package main
+
+import "log"
+
+// This is the user model - it roughly corresponds to the model part of MVP
+// This implementation is an in-memeory db for ease of implementation. Will follow up with a mySql implementation.
+// Status codes are defined in user_model_status.go
+
+var userID = 0
+
+// monotonically incrementing id. Is sufficient for this purpose, we don't really use it anyways.
+func getUserID() int {
+	userID++
+	return userID
+}
+
+// User - basic user definition
+//
+// The UserName is the key. The id would usually be the primary key and the UserName a secondary key.
+type User struct {
+	ID       int    `json:"ID"`
+	UserName string `json:"UserName"`
+	Email    string `json:"Email"`
+	Password string `json:"Password"`
+}
+
+// AllUsers - temporary (in memory) database for users
+type AllUsers []User
+
+var allUsers = AllUsers{}
+
+func initDB() bool {
+	// allows us to re-init our DB.
+	userID = 1
+	allUsers = AllUsers{}
+
+	log.Println("initDB(): OK")
+	return true
+}
+func releaseDB() {
+	log.Println("releaseDB(): OK")
+}
+
+func findUser(userName string) (bool, User, int) {
+	var user User
+	for i, v := range allUsers {
+		if v.UserName == userName {
+			return true, v, i
+		}
+	}
+
+	return false, user, 0
+}
+
+func isValidUser(user User) (bool, string) {
+	var ret bool // false by default
+	var reason string
+
+	// I know, I know, it only returns the first failure, but we get the idea.
+	if len(user.UserName) < 1 {
+		reason = "empty user name"
+	} else if len(user.Email) < 1 {
+		reason = "invalid email"
+	} else if len(user.Password) < 1 {
+		reason = "invalid password"
+	} else {
+		ret = true // ok, now is acceptable
+	}
+	return ret, reason
+}
+
+func initMemoryModel() bool {
+	return true
+}
+
+func modelCreateUser(newUser User) (User, ModelStatusCode, string) {
+	var retCode ModelStatusCode
+	var reason string
+
+	// test for valid record
+	if isValid, errorStr := isValidUser(newUser); isValid == false {
+		return newUser, ModelDBCreateFailure, errorStr
+	}
+
+	// test for exists.....
+	if exists, _, _ := findUser(newUser.UserName); exists == true {
+		retCode = ModelDBCreateFailure
+		reason = "User '" + newUser.UserName + "' already exists"
+		return newUser, retCode, reason
+	}
+
+	// increment user ID
+	newUser.ID = getUserID()
+	allUsers = append(allUsers, newUser)
+	retCode = ModelSuccess
+	// any errors will cause return code and reason to be modified
+
+	return newUser, retCode, reason
+}
+
+func modelUpdateUser(user User) (User, ModelStatusCode, string) {
+	var retCode ModelStatusCode
+	var reason string
+
+	// test for valid record
+	if isValid, errorStr := isValidUser(user); isValid == false {
+		return user, ModelDBUpdateFailure, errorStr
+	}
+
+	// test for exists.....
+	var exists bool
+	var userIndex int
+	if exists, _, userIndex = findUser(user.UserName); exists == false {
+		retCode = ModelDBUpdateFailure
+		reason = "User '" + user.UserName + "' not found, cannot update"
+		return user, retCode, reason
+	}
+
+	// ensure latest id, in case we wanted to actually use it down the road.
+	user.ID = allUsers[userIndex].ID
+	allUsers[userIndex] = user
+	retCode = ModelSuccess
+	// any errors will cause return code and reason to be modified
+
+	return user, retCode, reason
+}
+
+func modelGetUser(userName string) (User, ModelStatusCode, string) {
+	var retCode ModelStatusCode
+	var reason string
+	var user User
+
+	if len(userName) < 1 {
+		retCode = ModelDBGetFailure
+		reason = "User name not supplied"
+	} else if exists, userTmp, _ := findUser(userName); exists == true {
+		retCode = ModelSuccess
+		user = userTmp
+	} else {
+		retCode = ModelDBGetFailure
+		reason = "User '" + user.UserName + "' not found"
+	}
+
+	return user, retCode, reason
+}
+
+func modelGetAllUsers() ([]User, ModelStatusCode, string) {
+	return allUsers, ModelSuccess, ""
+}
+
+func modelDeleteUser(userName string) (User, ModelStatusCode, string) {
+	var retCode ModelStatusCode
+	var reason string
+	var user User
+
+	if len(userName) < 1 {
+		retCode = ModelDBDeleteFailure
+		reason = "User name not supplied"
+	} else if exists, userTmp, ndx := findUser(userName); exists == true {
+		retCode = ModelSuccess
+		user = userTmp                                         // we still return the deleted user
+		allUsers = append(allUsers[:ndx], allUsers[ndx+1:]...) // removes element at index ndx
+
+	} else {
+		retCode = ModelDBDeleteFailure
+		reason = "User '" + user.UserName + "' not found"
+	}
+
+	return user, retCode, reason
+}
+
+func modelDeleteAllUsers() (ModelStatusCode, string) {
+	allUsers = AllUsers{}
+	return ModelSuccess, ""
+}
